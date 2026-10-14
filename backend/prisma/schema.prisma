@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer?
+}
+
+enum Role {
+  ADMIN
+  AGENT
+  CUSTOMER
+}
+
+model Customer {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @unique
+  phone       String?
+  address     String?
+  dateOfBirth DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User?      @relation(fields: [userId], references: [id])
+  policies  Policy[]
+  claims    Claim[]
+  documents Document[]
+}
+
+model Policy {
+  id           Int          @id @default(autoincrement())
+  policyNumber String       @unique
+  customerId   Int
+  policyType   String
+  premiumAmount Decimal
+  startDate    DateTime
+  endDate      DateTime
+  status       PolicyStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  customer Customer         @relation(fields: [customerId], references: [id])
+  payments PremiumPayment[]
+  claims   Claim[]
+}
+
+enum PolicyStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Claim {
+  id          Int         @id @default(autoincrement())
+  customerId  Int
+  policyId    Int
+  claimNumber String      @unique
+  description String
+  amount      Decimal
+  status      ClaimStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer  Customer   @relation(fields: [customerId], references: [id])
+  policy    Policy     @relation(fields: [policyId], references: [id])
+  documents Document[]
+}
+
+enum ClaimStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model PremiumPayment {
+  id            Int           @id @default(autoincrement())
+  policyId      Int
+  amount        Decimal
+  paymentDate   DateTime      @default(now())
+  dueDate       DateTime
+  status        PaymentStatus @default(PENDING)
+  transactionId String?       @unique
+  createdAt     DateTime      @default(now())
+
+  policy Policy @relation(fields: [policyId], references: [id])
+}
+
+enum PaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+model Document {
+  id         Int      @id @default(autoincrement())
+  customerId Int
+  claimId    Int?
+  fileName   String
+  filePath   String
+  fileType   String
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  claim    Claim?   @relation(fields: [claimId], references: [id])
+}
